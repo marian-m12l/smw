@@ -51,7 +51,7 @@ typedef struct LoadFuncState {
 void loadFunc(SaveLoadInfo *sli, void *data, size_t data_size) {
   LoadFuncState *st = (LoadFuncState *)sli;
   assert((size_t)(st->pend - st->p) >= data_size);
-  memcpy(data, st->p, data_size);
+  readSaveStateImpl(data, data_size);
   st->p += data_size;
 }
 
@@ -394,9 +394,12 @@ void StateRecorder_StopReplay(StateRecorder *sr) {
 }*/
 
 void StateRecorder_Load(uint8* slot_addr) {
-  size_t size = *((size_t*) slot_addr); // TODO fix savestate size !!!
+  size_t size;
+  readSaveStateInitImpl();
+  readSaveStateImpl(&size, sizeof(size_t));
   LoadFuncState state = { {&loadFunc }, slot_addr + sizeof(size_t), slot_addr + sizeof(size_t), slot_addr + sizeof(size_t) + size };
   LoadSnesState(&state.base);
+  readSaveStateFinalizeImpl();
   assert(state.p == state.pend);
 }
 
@@ -818,8 +821,7 @@ void RtlReadSram(void) {
     if (fread(g_sram, 1, g_sram_size, f) != g_sram_size)
       fprintf(stderr, "Error reading %s\n", filename);
     fclose(f);*/
-    uint8_t* sram = readSramImpl();
-    memcpy(g_sram, sram, 2048); // FIXME g_sram is NULL ??? no, g_static_ram
+    readSramImpl(g_ram);
     /*ByteArray_Resize(&state_recorder.base_snapshot, g_sram_size);
     memcpy(state_recorder.base_snapshot.data, g_sram, g_sram_size);
   }*/
